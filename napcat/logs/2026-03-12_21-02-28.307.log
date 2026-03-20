@@ -1,4 +1,0 @@
-03-12 21:02:28 [info] [StdOut] 已重定向到命名管道: \\.\pipe\NapCat_20920
-03-15 11:18:08 [warn] [NapCat] [Process] 进程 35612 仍在运行，尝试强制杀掉
-03-15 11:18:12 [info] [NapCat] [Process] 已清理残留进程: PID 2000 (GPU)
-03-15 11:18:12 [info] [NapCat] [Process] 已清理残留进程: PID 10200 (Utility)

@@ -1,7 +1,0 @@
-02-24 19:40:11 [info] [StdOut] 已重定向到命名管道: \\.\pipe\NapCat_10080
-02-24 20:03:03 [warn] [NapCat] [Process] 进程 28600 仍在运行，尝试强制杀掉
-02-24 20:03:07 [info] [NapCat] [Process] 已清理残留进程: PID 14452 (GPU)
-02-24 20:03:07 [info] [NapCat] [Process] 已清理残留进程: PID 10288 (Utility)
-02-24 20:36:26 [warn] [NapCat] [Process] 进程 22372 仍在运行，尝试强制杀掉
-02-24 20:36:30 [info] [NapCat] [Process] 已清理残留进程: PID 17140 (Utility)
-02-24 20:36:30 [info] [NapCat] [Process] 已清理残留进程: PID 21252 (GPU)

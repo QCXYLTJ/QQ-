@@ -12,6 +12,7 @@ const DEFAULT_CONFIG = {
 	lockedNicknames: {},
 	targetedUsers: [],
 	ownlist: [],
+	creditBalances: {}, // 用户的可禁言天数余额
 };
 Reflect.defineProperty(Array.prototype, 'remove', {
 	value(value) {
@@ -95,12 +96,15 @@ function buildConfigUI(ctx) {
 }
 
 async function callOB11(ctx, action, params) {
-	const result = await ctx.actions.call(action, params, ctx.adapterName, ctx.pluginManager.config);
-	return result;
+	try {
+		const result = await ctx.actions.call(action, params, ctx.adapterName, ctx.pluginManager.config);
+		return result;
+	} catch (error) { }
 }
 const huancun = new Map();
 
 async function onMessage(ctx, event) {
+	//ctx.logger.info(event);
 	const groupId = String(event.group_id);
 	const msg = event.raw_message?.trim() || '';
 	const userId = String(event.user_id);
@@ -126,6 +130,7 @@ async function onMessage(ctx, event) {
 	const own = await callOB11(ctx, 'get_group_member_info', { group_id: groupId, user_id: ownerqq, no_cache: true });
 	const ms = await callOB11(ctx, 'get_group_member_list', { group_id: groupId, no_cache: true });
 	const isguanli = ['owner', 'admin'].includes(own.role);
+	const isguanli2 = ['owner', 'admin'].includes(event.sender.role);
 	const userid = [];
 	const textlist = [];
 	for (const obj of event.message) {
@@ -138,7 +143,7 @@ async function onMessage(ctx, event) {
 	}
 
 	//自动检测大段文字
-	if (textlist.join().length > 99 && isguanli && !isAdmin) {
+	if (textlist.join().length > 99 && isguanli && !isAdmin && !isguanli2) {
 		await callOB11(ctx, 'set_group_ban', { group_id: groupId, user_id: userId, duration: 300 });
 		await callOB11(ctx, 'send_group_msg', {
 			group_id: groupId,
@@ -250,6 +255,81 @@ async function onMessage(ctx, event) {
 		const lockName = parts[2];
 		const atSeg = event.message.find((s) => s.type === 'at');
 		const targetId = atSeg ? String(atSeg.data?.qq) : params;
+		//禁言骰子
+		if (cmd == '禁言骰子' && isguanli && !isguanli2) {
+			// 生成 -30 到 30 的随机整数
+			const mins = Math.floor(Math.random() * 86400) - 43200; // -30 ~ 30
+			if (mins < 0) {
+				const duration = Math.abs(mins) * 60; // 转秒
+				await callOB11(ctx, 'set_group_ban', {
+					group_id: groupId,
+					user_id: userId,
+					duration: duration,
+				});
+				await callOB11(ctx, 'send_group_msg', {
+					group_id: groupId,
+					message: [
+						{ type: 'at', data: { qq: userId } },
+						{ type: 'text', data: { text: ` 骰子点数 ${mins}，禁言 ${Math.abs(mins)} 分钟 🎲` } },
+					],
+				});
+			} // 负数：禁言目标
+			else {
+				const currentBalance = currentConfig.creditBalances[userId] || 0;
+				currentConfig.creditBalances[userId] = currentBalance + mins;
+				saveConfig(ctx, { creditBalances: currentConfig.creditBalances });
+				await callOB11(ctx, 'send_group_msg', {
+					group_id: groupId,
+					message: [
+						{ type: 'at', data: { qq: userId } },
+						{ type: 'text', data: { text: ` 骰子点数 ${mins}，获得 ${mins} 分钟禁言额度，当前剩余 ${currentConfig.creditBalances[userId]} 分钟 🎲` } },
+					],
+				});
+			} // 正数：增加用户的禁言天数余额
+		}
+		if (cmd === '禁言') {
+			const mins = Number(lockName);
+			const duration = mins * 60;
+			if (isguanli2) {
+				await callOB11(ctx, 'set_group_ban', {
+					group_id: groupId,
+					user_id: targetId,
+					duration: duration,
+				});
+			} else {
+				const balance = currentConfig.creditBalances[userId] || 0;
+				if (balance <= 0) {
+					await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: '❌ 你没有可用的禁言余额。' });
+				} else {
+					if (isNaN(mins) || mins <= 0) {
+						await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: '❌ 请提供有效的禁言分钟，例如：禁言/@用户/3' });
+					} else if (balance < mins) {
+						await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `❌ 你的余额不足（剩余 ${balance} 分钟。` });
+					} // 检查余额
+					else {
+						await callOB11(ctx, 'set_group_ban', {
+							group_id: groupId,
+							user_id: targetId,
+							duration: duration,
+						});
+						currentConfig.creditBalances[userId] = balance - mins;
+						saveConfig(ctx, { creditBalances: currentConfig.creditBalances });
+						await callOB11(ctx, 'send_group_msg', {
+							group_id: groupId,
+							message: [
+								{ type: 'at', data: { qq: targetId } },
+								{ type: 'text', data: { text: ` 已被 ${userId} 禁言 ${mins} 天，扣除 ${mins} 天余额。` } },
+							],
+						});
+					} // 执行禁言
+				}
+			}
+		}
+		// 添加查询余额命令（可选，方便用户查看）
+		if (cmd === '禁言余额') {
+			const balance = currentConfig.creditBalances[userId] || 0;
+			await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `📊 你的禁言余额：${balance} 分钟` });
+		}
 		if (cmd === '开始攻击') {
 			if (!currentConfig.targetedUsers.includes(targetId)) {
 				currentConfig.targetedUsers.push(targetId);
