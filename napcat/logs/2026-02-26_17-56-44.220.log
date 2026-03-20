@@ -1,0 +1,16 @@
+02-26 17:56:44 [info] [StdOut] 已重定向到命名管道: \\.\pipe\NapCat_7776
+02-27 08:53:06 [warn] [NapCat] [Process] 进程 21048 仍在运行，尝试强制杀掉
+02-27 08:53:03 [info] [NapCat] [Process] 已清理残留进程: PID 25188 (GPU)
+02-27 08:53:03 [info] [NapCat] [Process] 已清理残留进程: PID 23636 (Utility)
+02-28 08:26:18 [warn] [NapCat] [Process] 进程 10052 仍在运行，尝试强制杀掉
+02-28 08:26:22 [info] [NapCat] [Process] 已清理残留进程: PID 11592 (Utility)
+02-28 08:26:22 [info] [NapCat] [Process] 已清理残留进程: PID 30428 (GPU)
+02-28 08:27:07 [warn] [NapCat] [Process] 进程 20852 仍在运行，尝试强制杀掉
+02-28 08:27:11 [info] [NapCat] [Process] 已清理残留进程: PID 18412 (Utility)
+02-28 08:27:11 [info] [NapCat] [Process] 已清理残留进程: PID 26384 (GPU)
+02-28 08:27:19 [warn] [NapCat] [Process] 进程 30156 仍在运行，尝试强制杀掉
+02-28 08:27:23 [info] [NapCat] [Process] 已清理残留进程: PID 19812 (Utility)
+02-28 08:27:23 [info] [NapCat] [Process] 已清理残留进程: PID 25980 (GPU)
+02-28 15:15:59 [warn] [NapCat] [Process] 进程 15708 仍在运行，尝试强制杀掉
+02-28 15:16:03 [info] [NapCat] [Process] 已清理残留进程: PID 25420 (Utility)
+02-28 15:16:03 [info] [NapCat] [Process] 已清理残留进程: PID 7060 (GPU)

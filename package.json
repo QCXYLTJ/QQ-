@@ -1,20 +1,22 @@
 {
-  "name": "groupmanager",
-  "version": "1.2.1",
-  "type": "module",
-  "main": "dist/index.mjs",
-  "description": "NapCat 群管插件",
-  "author": "Chace",
-  "dependencies": {
-    "napcat-types": "latest"
+  "name": "qq-chat",
+  "version": "9.9.27-45627",
+  "private": true,
+  "description": "QQ",
+  "productName": "QQ",
+  "author": {
+    "name": "Tencent",
+    "email": "QQ-Team@tencent.com"
   },
-  "devDependencies": {
-    "@rollup/plugin-node-resolve": "^15.2.3",
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
-    "vite": "^5.0.0"
+  "homepage": "https://im.qq.com",
+  "sideEffects": true,
+  "bin": {
+    "qd": "externals/devtools/cli/index.js"
   },
-  "scripts": {
-    "build": "vite build"
-  }
+  "main": "./application.asar/app_launcher/index.js",
+  "buildVersion": "45627",
+  "isPureShell": true,
+  "isByteCodeShell": true,
+  "platform": "win32",
+  "eleArch": "x64"
 }
