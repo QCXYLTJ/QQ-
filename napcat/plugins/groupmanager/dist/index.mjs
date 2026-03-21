@@ -256,38 +256,45 @@ async function onMessage(ctx, event) {
 		const atSeg = event.message.find((s) => s.type === 'at');
 		const targetId = atSeg ? String(atSeg.data?.qq) : params;
 		//禁言骰子
-		if (cmd == '禁言骰子' && isguanli && !isguanli2) {
-			// 生成 -30 到 30 的随机整数
-			const mins = Math.floor(Math.random() * 86400) - 43200; // -30 ~ 30
-			if (mins < 0) {
-				const duration = Math.abs(mins) * 60; // 转秒
-				await callOB11(ctx, 'set_group_ban', {
-					group_id: groupId,
-					user_id: userId,
-					duration: duration,
-				});
-				await callOB11(ctx, 'send_group_msg', {
-					group_id: groupId,
-					message: [
-						{ type: 'at', data: { qq: userId } },
-						{ type: 'text', data: { text: ` 骰子点数 ${mins}，禁言 ${Math.abs(mins)} 分钟 🎲` } },
-					],
-				});
-			} // 负数：禁言目标
-			else {
+		if (cmd == '禁言骰子' && isguanli) {
+			setTimeout(() => {
+				loadConfig(ctx);
+				const mins = Math.floor(Math.random() * 86400) - 43200; // -30 ~ 30
 				const currentBalance = currentConfig.creditBalances[userId] || 0;
 				currentConfig.creditBalances[userId] = currentBalance + mins;
 				saveConfig(ctx, { creditBalances: currentConfig.creditBalances });
-				await callOB11(ctx, 'send_group_msg', {
-					group_id: groupId,
-					message: [
-						{ type: 'at', data: { qq: userId } },
-						{ type: 'text', data: { text: ` 骰子点数 ${mins}，获得 ${mins} 分钟禁言额度，当前剩余 ${currentConfig.creditBalances[userId]} 分钟 🎲` } },
-					],
-				});
-			} // 正数：增加用户的禁言天数余额
+				const yue = currentConfig.creditBalances[userId];
+				if (yue < 0) {
+					const duration = Math.abs(yue) * 60; // 转秒
+					callOB11(ctx, 'set_group_ban', {
+						group_id: groupId,
+						user_id: userId,
+						duration: duration,
+					});
+					callOB11(ctx, 'send_group_msg', {
+						group_id: groupId,
+						message: [
+							{ type: 'at', data: { qq: userId } },
+							{ type: 'text', data: { text: ` 原有禁言余额 ${currentBalance} ，骰子点数 ${mins}，当前禁言余额 ${yue} ，禁言 ${Math.abs(yue)} 分钟 🎲` } },
+						],
+					});
+				} // 负数：禁言目标
+				else {
+					callOB11(ctx, 'send_group_msg', {
+						group_id: groupId,
+						message: [
+							{ type: 'at', data: { qq: userId } },
+							{
+								type: 'text',
+								data: { text: ` 原有禁言余额 ${currentBalance}，骰子点数 ${mins}，当前禁言余额 ${yue} 🎲` },
+							},
+						],
+					});
+				} // 正数：增加用户的禁言天数余额
+			}, Math.random() * 1000);
 		}
 		if (cmd === '禁言') {
+			loadConfig(ctx);
 			const mins = Number(lockName);
 			const duration = mins * 60;
 			if (isguanli2) {
@@ -327,6 +334,7 @@ async function onMessage(ctx, event) {
 		}
 		// 添加查询余额命令（可选，方便用户查看）
 		if (cmd === '禁言余额') {
+			loadConfig(ctx);
 			const balance = currentConfig.creditBalances[userId] || 0;
 			await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `📊 你的禁言余额：${balance} 分钟` });
 		}
