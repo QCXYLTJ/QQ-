@@ -4,8 +4,7 @@ import { gongjilist } from './攻击.js';
 const DEFAULT_CONFIG = {
 	welcomeEnable: true,
 	welcomeTemplate: '欢迎 {nickname}({user_id}) 加入本群！',
-	filterEnable: false,
-	filterKeywords: '加群|兼职|博彩',
+	filterKeywords: [],
 	filterPunish: 'none',
 	groupListMode: 'none',
 	groupListIds: '',
@@ -76,22 +75,7 @@ function buildConfigUI(ctx) {
 		// --- 入群欢迎 ---
 		NapCatConfig.html('<div style="margin-top:20px;"><b>👋 入群欢迎</b></div>'),
 		NapCatConfig.boolean('welcomeEnable', '启用入群欢迎', DEFAULT_CONFIG.welcomeEnable, '是否在新成员入群时发送欢迎语'),
-		NapCatConfig.text('welcomeTemplate', '欢迎语模板', DEFAULT_CONFIG.welcomeTemplate, '支持变量: {nickname}, {user_id}'),
-		// --- 违禁词 ---
-		NapCatConfig.html('<div style="margin-top:20px;"><b>🚫 违禁词过滤</b></div>'),
-		NapCatConfig.boolean('filterEnable', '启用关键词过滤', DEFAULT_CONFIG.filterEnable, '检测到关键词自动撤回'),
-		NapCatConfig.text('filterKeywords', '违禁词列表', DEFAULT_CONFIG.filterKeywords, '使用 | 分隔多个词'),
-		NapCatConfig.select(
-			'filterPunish',
-			'触发惩罚',
-			[
-				{ label: '仅撤回', value: 'none' },
-				{ label: '撤回并禁言1分钟', value: 'ban' },
-				{ label: '撤回并踢出', value: 'kick' },
-			],
-			DEFAULT_CONFIG.filterPunish,
-			'触发违禁词后的额外操作'
-		)
+		NapCatConfig.text('welcomeTemplate', '欢迎语模板', DEFAULT_CONFIG.welcomeTemplate, '支持变量: {nickname}, {user_id}')
 	);
 }
 
@@ -108,7 +92,7 @@ async function onMessage(ctx, event) {
 	const groupId = String(event.group_id);
 	const msg = event.raw_message?.trim() || '';
 	const userId = String(event.user_id);
-	const isAdmin = currentConfig.ownlist.includes(userId);
+	const userAdmin = currentConfig.ownlist.includes(userId);
 	const ownerinfo = await callOB11(ctx, 'get_login_info', {});
 	const ownerqq = String(ownerinfo.user_id);
 
@@ -129,8 +113,8 @@ async function onMessage(ctx, event) {
 	if (event.message_type !== 'group') return;
 	const own = await callOB11(ctx, 'get_group_member_info', { group_id: groupId, user_id: ownerqq, no_cache: true });
 	const ms = await callOB11(ctx, 'get_group_member_list', { group_id: groupId, no_cache: true });
-	const isguanli = ['owner', 'admin'].includes(own.role);
-	const isguanli2 = ['owner', 'admin'].includes(event.sender.role);
+	const selfguanli = ['owner', 'admin'].includes(own.role);
+	const userguanli = ['owner', 'admin'].includes(event.sender.role);
 	const userid = [];
 	const textlist = [];
 	for (const obj of event.message) {
@@ -141,9 +125,10 @@ async function onMessage(ctx, event) {
 			textlist.push(obj.data.text);
 		}
 	}
+	const textall = textlist.join();
 
 	//自动检测大段文字
-	if (textlist.join().length > 99 && isguanli && !isAdmin && !isguanli2) {
+	if (textall.length > 99 && selfguanli && !userAdmin && !userguanli) {
 		await callOB11(ctx, 'set_group_ban', { group_id: groupId, user_id: userId, duration: 300 });
 		await callOB11(ctx, 'send_group_msg', {
 			group_id: groupId,
@@ -155,7 +140,7 @@ async function onMessage(ctx, event) {
 	}
 
 	// 群名片管理
-	if (!window.zuduan1 && isguanli) {
+	if (!window.zuduan1 && selfguanli) {
 		window.zuduan1 = true;
 		const lm = currentConfig.lockedNicknames;
 		// 一次性收集待修改成员
@@ -185,7 +170,7 @@ async function onMessage(ctx, event) {
 	}
 
 	// 自动跟话
-	if (!isAdmin && groupId != '774922031' && Math.random() < 0.1) {
+	if (!userAdmin && groupId != '774922031' && Math.random() < 0.1) {
 		const textlist = [];
 		for (const obj of event.message) {
 			if (obj.type === 'text') {
@@ -212,7 +197,7 @@ async function onMessage(ctx, event) {
 
 	// 自动反击
 	const fanying = function () {
-		if (!isAdmin && currentConfig.ownlist.some((id) => userid.includes(id)) && textlist.some((t) => t.includes('妈') || t.includes('爹') || t.includes('爸') || t.includes('狗') || t.includes('逼'))) {
+		if (!userAdmin && currentConfig.ownlist.some((id) => userid.includes(id)) && ['妈', '爹', '爸', '狗', '逼', '🐎', '🐴', 'nm', '屄'].some((s) => textall.includes(s))) {
 			callOB11(ctx, 'send_group_msg', {
 				group_id: groupId,
 				message: [
@@ -235,28 +220,28 @@ async function onMessage(ctx, event) {
 		});
 	}
 
-	//指令反应
-	if (!isAdmin && currentConfig.filterEnable && currentConfig.filterKeywords) {
-		const keywords = currentConfig.filterKeywords.split('|').filter((k) => k);
-		if (keywords.some((k) => msg.includes(k))) {
-			await callOB11(ctx, 'delete_msg', { message_id: event.message_id });
-			if (currentConfig.filterPunish === 'ban') {
-				await callOB11(ctx, 'set_group_ban', { group_id: groupId, user_id: userId, duration: 60 });
-			} else if (currentConfig.filterPunish === 'kick') {
-				await callOB11(ctx, 'set_group_kick_members', { group_id: groupId, user_id: [userId], reject_add_request: false });
-			}
-		}
+	//违禁词处理
+	if (!userAdmin && selfguanli && !userguanli && currentConfig.filterKeywords.some((s) => textall.includes(s))) {
+		await callOB11(ctx, 'delete_msg', { message_id: event.message_id });
+		await callOB11(ctx, 'set_group_ban', { group_id: groupId, user_id: userId, duration: 300 });
+		await callOB11(ctx, 'send_group_msg', {
+			group_id: groupId,
+			message: [
+				{ type: 'at', data: { qq: userId } },
+				{ type: 'text', data: { text: ` 因为发违禁词而被禁言五分钟` } },
+			],
+		});
 	}
 
-	if (msg.includes('/') && isAdmin) {
+	//指令反应
+	if (msg.includes('/')) {
 		const parts = msg.split('/');
 		const cmd = parts[0];
 		const params = parts[1];
 		const lockName = parts[2];
 		const atSeg = event.message.find((s) => s.type === 'at');
 		const targetId = atSeg ? String(atSeg.data?.qq) : params;
-		//禁言骰子
-		if (cmd == '禁言骰子' && isguanli) {
+		if (cmd == '禁言骰子' && selfguanli) {
 			setTimeout(() => {
 				loadConfig(ctx);
 				const mins = Math.floor(Math.random() * 86400) - 43200; // -30 ~ 30
@@ -297,7 +282,7 @@ async function onMessage(ctx, event) {
 			loadConfig(ctx);
 			const mins = Number(lockName);
 			const duration = mins * 60;
-			if (isguanli2) {
+			if (userguanli) {
 				await callOB11(ctx, 'set_group_ban', {
 					group_id: groupId,
 					user_id: targetId,
@@ -338,64 +323,86 @@ async function onMessage(ctx, event) {
 			const balance = currentConfig.creditBalances[userId] || 0;
 			await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `📊 你的禁言余额：${balance} 分钟` });
 		}
-		if (cmd === '开始攻击') {
-			if (!currentConfig.targetedUsers.includes(targetId)) {
-				currentConfig.targetedUsers.push(targetId);
-				saveConfig(ctx, { targetedUsers: currentConfig.targetedUsers });
-				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已开始攻击 ${targetId}` });
+		if (userAdmin) {
+			if (cmd == '违禁词添加' && selfguanli) {
+				if (!currentConfig.filterKeywords.includes(params)) {
+					currentConfig.filterKeywords.push(params);
+					saveConfig(ctx, { filterKeywords: currentConfig.filterKeywords });
+				}
+				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `违禁词添加 ${params}` });
 			}
-		}
-		if (cmd === '终止攻击') {
-			if (currentConfig.targetedUsers.includes(targetId)) {
-				currentConfig.targetedUsers.remove(targetId);
-				saveConfig(ctx, { targetedUsers: currentConfig.targetedUsers });
-				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已终止攻击 ${targetId}` });
+			if (cmd == '违禁词移除' && selfguanli) {
+				if (currentConfig.filterKeywords.includes(params)) {
+					currentConfig.filterKeywords.remove(params);
+					saveConfig(ctx, { filterKeywords: currentConfig.filterKeywords });
+				}
+				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `违禁词移除 ${params}` });
 			}
-		}
-		if (cmd === '攻击列表') {
-			const list = currentConfig.targetedUsers.length === 0 ? '当前没有被攻击的用户' : `${currentConfig.targetedUsers.join(', ')}`;
-			await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: list });
-		}
-		if (cmd === '锁定名片') {
-			await callOB11(ctx, 'set_group_card', { group_id: groupId, user_id: targetId, card: lockName });
-			currentConfig.lockedNicknames[targetId] = lockName;
-			saveConfig(ctx, { lockedNicknames: currentConfig.lockedNicknames });
-			await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已锁定 ${targetId} 的群名片为: ${lockName}` });
-		}
-		if (cmd === '解锁名片') {
-			if (currentConfig.lockedNicknames[targetId]) {
-				delete currentConfig.lockedNicknames[targetId];
+			if (cmd == '违禁词列表' && selfguanli) {
+				const list = `违禁词列表：${currentConfig.filterKeywords.join(', ')}`;
+				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: list });
+			}
+			//禁言骰子
+			if (cmd === '开始攻击') {
+				if (!currentConfig.targetedUsers.includes(targetId)) {
+					currentConfig.targetedUsers.push(targetId);
+					saveConfig(ctx, { targetedUsers: currentConfig.targetedUsers });
+					await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已开始攻击 ${targetId}` });
+				}
+			}
+			if (cmd === '终止攻击') {
+				if (currentConfig.targetedUsers.includes(targetId)) {
+					currentConfig.targetedUsers.remove(targetId);
+					saveConfig(ctx, { targetedUsers: currentConfig.targetedUsers });
+					await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已终止攻击 ${targetId}` });
+				}
+			}
+			if (cmd === '攻击列表') {
+				const list = currentConfig.targetedUsers.length === 0 ? '当前没有被攻击的用户' : `攻击列表：${currentConfig.targetedUsers.join(', ')}`;
+				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: list });
+			}
+			if (cmd === '锁定名片') {
+				await callOB11(ctx, 'set_group_card', { group_id: groupId, user_id: targetId, card: lockName });
+				currentConfig.lockedNicknames[targetId] = lockName;
 				saveConfig(ctx, { lockedNicknames: currentConfig.lockedNicknames });
-				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已解除 ${targetId} 的群名片锁定` });
+				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已锁定 ${targetId} 的群名片为: ${lockName}` });
 			}
-		}
-		if (cmd === '锁定名片列表') {
-			const locked = Object.entries(currentConfig.lockedNicknames);
-			const listMsg = locked.map(([qq, name]) => `${qq}: ${name}`).join('\n');
-			await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `锁定的群名片:\n${listMsg}` });
-		}
-		if (cmd === '添加主人') {
-			if (!currentConfig.ownlist.includes(targetId)) {
-				currentConfig.ownlist.push(targetId);
-				saveConfig(ctx, { ownlist: currentConfig.ownlist });
-				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已添加 ${targetId} 为主人` });
+			if (cmd === '解锁名片') {
+				if (currentConfig.lockedNicknames[targetId]) {
+					delete currentConfig.lockedNicknames[targetId];
+					saveConfig(ctx, { lockedNicknames: currentConfig.lockedNicknames });
+					await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已解除 ${targetId} 的群名片锁定` });
+				}
 			}
-		}
-		if (cmd === '移除主人') {
-			if (currentConfig.ownlist.includes(targetId)) {
-				currentConfig.ownlist.remove(targetId);
-				saveConfig(ctx, { ownlist: currentConfig.ownlist });
-				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已移除 ${targetId} 的主人权限` });
+			if (cmd === '锁定名片列表') {
+				const locked = Object.entries(currentConfig.lockedNicknames);
+				const listMsg = locked.map(([qq, name]) => `${qq}: ${name}`).join('\n');
+				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `锁定名片列表:\n${listMsg}` });
 			}
-		}
-		if (cmd === '主人列表') {
-			const list = currentConfig.ownlist.length === 0 ? '当前没有主人' : `${currentConfig.ownlist.join(', ')}`;
-			await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: list });
+			if (cmd === '添加主人') {
+				if (!currentConfig.ownlist.includes(targetId)) {
+					currentConfig.ownlist.push(targetId);
+					saveConfig(ctx, { ownlist: currentConfig.ownlist });
+					await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已添加 ${targetId} 为主人` });
+				}
+			}
+			if (cmd === '移除主人') {
+				if (currentConfig.ownlist.includes(targetId)) {
+					currentConfig.ownlist.remove(targetId);
+					saveConfig(ctx, { ownlist: currentConfig.ownlist });
+					await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `已移除 ${targetId} 的主人权限` });
+				}
+			}
+			if (cmd === '主人列表') {
+				const list = currentConfig.ownlist.length === 0 ? '当前没有主人' : `主人列表：${currentConfig.ownlist.join(', ')}`;
+				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: list });
+			}
 		}
 	}
 }
 async function onEvent(ctx, event) {
-	if (event.notice_type == 'group_recall') {
+	//ctx.logger.info(event);
+	if (event.notice_type == 'group_recall' && !currentConfig.ownlist.includes(String(event.operator_id))) {
 		const message = huancun.get(event.message_id);
 		if (Array.isArray(message)) {
 			message.unshift({

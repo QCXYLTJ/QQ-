@@ -1,5 +1,3 @@
 {
-  "napcat-plugin-group-manager": false,
-  "groupmanager": true,
-  "napcat-plugin-builtin": true
+  "groupmanager": true
 }

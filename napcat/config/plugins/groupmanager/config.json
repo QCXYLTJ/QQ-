@@ -1,8 +1,12 @@
 {
   "welcomeEnable": true,
   "welcomeTemplate": "欢迎 {nickname}将军前来觐见！",
-  "filterEnable": false,
-  "filterKeywords": "加群|兼职|博彩",
+  "filterKeywords": [
+    "加群",
+    "兼职",
+    "博彩",
+    "三角洲"
+  ],
   "filterPunish": "none",
   "groupListMode": "none",
   "groupListIds": "",
@@ -48,8 +52,8 @@
     "1249807257"
   ],
   "creditBalances": {
-    "1476811518": 55931,
-    "2324729701": 26340,
+    "1476811518": 90854,
+    "2324729701": 307,
     "2791034087": 18460
   }
 }
