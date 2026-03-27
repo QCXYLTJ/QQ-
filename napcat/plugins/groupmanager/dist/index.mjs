@@ -95,6 +95,7 @@ async function onMessage(ctx, event) {
 	const userAdmin = currentConfig.ownlist.includes(userId);
 	const ownerinfo = await callOB11(ctx, 'get_login_info', {});
 	const ownerqq = String(ownerinfo.user_id);
+	const isself = (userId === ownerqq);
 
 	//加入缓存
 	huancun.set(event.message_id, event.message);
@@ -128,7 +129,7 @@ async function onMessage(ctx, event) {
 	const textall = textlist.join();
 
 	//自动检测大段文字
-	if (textall.length > 99 && selfguanli && !userAdmin && !userguanli) {
+	if (textall.length > 99 && selfguanli && !isself && !userAdmin && !userguanli) {
 		await callOB11(ctx, 'set_group_ban', { group_id: groupId, user_id: userId, duration: 300 });
 		await callOB11(ctx, 'send_group_msg', {
 			group_id: groupId,
@@ -170,7 +171,7 @@ async function onMessage(ctx, event) {
 	}
 
 	// 自动跟话
-	if (!userAdmin && groupId != '774922031' && Math.random() < 0.1) {
+	if (!isself && !userAdmin && groupId != '774922031' && Math.random() < 0.1) {
 		const textlist = [];
 		for (const obj of event.message) {
 			if (obj.type === 'text') {
@@ -197,7 +198,7 @@ async function onMessage(ctx, event) {
 
 	// 自动反击
 	const fanying = function () {
-		if (!userAdmin && currentConfig.ownlist.some((id) => atlist.includes(id)) && ['妈', '爹', '爸', '狗', '逼', '🐎', '🐴', 'nm', '屄'].some((s) => textall.includes(s))) {
+		if (!isself && !userAdmin && currentConfig.ownlist.some((id) => atlist.includes(id)) && ['妈', '爹', '爸', '狗', '逼', '🐎', '🐴', 'nm', '屄'].some((s) => textall.includes(s))) {
 			callOB11(ctx, 'send_group_msg', {
 				group_id: groupId,
 				message: [
@@ -210,7 +211,7 @@ async function onMessage(ctx, event) {
 	fanying();
 
 	//群聊自动攻击
-	if (currentConfig.targetedUsers.includes(userId)) {
+	if (!isself && !userAdmin && currentConfig.targetedUsers.includes(userId)) {
 		callOB11(ctx, 'send_group_msg', {
 			group_id: groupId,
 			message: [
@@ -221,7 +222,7 @@ async function onMessage(ctx, event) {
 	}
 
 	//违禁词处理
-	if (!userAdmin && selfguanli && !userguanli && currentConfig.filterKeywords.some((s) => textall.includes(s))) {
+	if (!isself && !userAdmin && selfguanli && !userguanli && currentConfig.filterKeywords.some((s) => textall.includes(s))) {
 		await callOB11(ctx, 'delete_msg', { message_id: event.message_id });
 		await callOB11(ctx, 'set_group_ban', { group_id: groupId, user_id: userId, duration: 300 });
 		await callOB11(ctx, 'send_group_msg', {
@@ -241,7 +242,7 @@ async function onMessage(ctx, event) {
 		const lockName = parts[2];
 		const atSeg = event.message.find((s) => s.type === 'at');
 		const targetId = atSeg ? String(atSeg.data?.qq) : params;
-		if (cmd == '禁言骰子' && selfguanli) {
+		if (cmd == '禁言骰子' && selfguanli && !userguanli) {
 			setTimeout(async function () {
 				loadConfig(ctx);
 				const mins = Math.floor(Math.random() * 86400) - 43200; // -30 ~ 30
@@ -412,6 +413,16 @@ async function onMessage(ctx, event) {
 				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: list });
 			}
 		}
+	}
+
+	if (!isself && !userAdmin && ['人机', '机器人', '入机', '脚本'].some((s) => msg.includes(s))) {
+		await callOB11(ctx, 'send_group_msg', {
+			group_id: groupId,
+			message: [
+				{ type: 'at', data: { qq: userId } },
+				{ type: 'text', data: { text: ` 我不是人机` } },
+			],
+		});
 	}
 }
 async function onEvent(ctx, event) {
