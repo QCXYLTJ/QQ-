@@ -95,7 +95,7 @@ async function onMessage(ctx, event) {
 	const userAdmin = currentConfig.ownlist.includes(userId);
 	const ownerinfo = await callOB11(ctx, 'get_login_info', {});
 	const ownerqq = String(ownerinfo.user_id);
-	const isself = (userId === ownerqq);
+	const isself = userId === ownerqq;
 
 	//加入缓存
 	huancun.set(event.message_id, event.message);
@@ -128,18 +128,6 @@ async function onMessage(ctx, event) {
 	}
 	const textall = textlist.join();
 
-	//自动检测大段文字
-	if (textall.length > 99 && selfguanli && !isself && !userAdmin && !userguanli) {
-		await callOB11(ctx, 'set_group_ban', { group_id: groupId, user_id: userId, duration: 300 });
-		await callOB11(ctx, 'send_group_msg', {
-			group_id: groupId,
-			message: [
-				{ type: 'at', data: { qq: userId } },
-				{ type: 'text', data: { text: ` 因为发大段文字而被禁言五分钟` } },
-			],
-		});
-	}
-
 	// 群名片管理
 	if (!window.zuduan1 && selfguanli) {
 		window.zuduan1 = true;
@@ -170,30 +158,53 @@ async function onMessage(ctx, event) {
 		window.zuduan1 = false;
 	}
 
-	// 自动跟话
-	if (!isself && !userAdmin && groupId != '774922031' && Math.random() < 0.1) {
-		const textlist = [];
-		for (const obj of event.message) {
-			if (obj.type === 'text') {
-				const array = obj.data.text.split(/[，。, ]/);
-				for (const t of array) {
-					textlist.push(t);
+	if (!['1476811518'].includes(ownerqq)) {
+		// 自动跟话
+		if (!isself && !userAdmin && !['774922031', '314590231'].includes(groupId) && Math.random() < 0.1) {
+			const textlist = [];
+			for (const obj of event.message) {
+				if (obj.type === 'text') {
+					const array = obj.data.text.split(/[，。, ]/);
+					for (const t of array) {
+						textlist.push(t);
+					}
 				}
 			}
-		}
-		const xiaoxi = ` ${textlist.randomget()}🥵🥵🥵`;
-		callOB11(ctx, 'send_group_msg', {
-			group_id: groupId,
-			message: [
-				{ type: 'at', data: { qq: userId } },
-				{
-					type: 'text',
-					data: {
-						text: xiaoxi,
+			const xiaoxi = ` ${textlist.randomget()}🥵🥵🥵`;
+			callOB11(ctx, 'send_group_msg', {
+				group_id: groupId,
+				message: [
+					{ type: 'at', data: { qq: userId } },
+					{
+						type: 'text',
+						data: {
+							text: xiaoxi,
+						},
 					},
-				},
-			],
-		});
+				],
+			});
+		}
+		// 人机自动否认
+		if (!isself && !userAdmin && ['人机', '机器人', '入机', '脚本'].some((s) => msg.includes(s))) {
+			await callOB11(ctx, 'send_group_msg', {
+				group_id: groupId,
+				message: [
+					{ type: 'at', data: { qq: userId } },
+					{ type: 'text', data: { text: ` 我不是人机` } },
+				],
+			});
+		}
+		//自动检测大段文字
+		if (textall.length > 99 && selfguanli && !isself && !userAdmin && !userguanli) {
+			await callOB11(ctx, 'set_group_ban', { group_id: groupId, user_id: userId, duration: 300 });
+			await callOB11(ctx, 'send_group_msg', {
+				group_id: groupId,
+				message: [
+					{ type: 'at', data: { qq: userId } },
+					{ type: 'text', data: { text: ` 因为发大段文字而被禁言五分钟` } },
+				],
+			});
+		}
 	}
 
 	// 自动反击
@@ -413,16 +424,6 @@ async function onMessage(ctx, event) {
 				await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: list });
 			}
 		}
-	}
-
-	if (!isself && !userAdmin && ['人机', '机器人', '入机', '脚本'].some((s) => msg.includes(s))) {
-		await callOB11(ctx, 'send_group_msg', {
-			group_id: groupId,
-			message: [
-				{ type: 'at', data: { qq: userId } },
-				{ type: 'text', data: { text: ` 我不是人机` } },
-			],
-		});
 	}
 }
 async function onEvent(ctx, event) {
