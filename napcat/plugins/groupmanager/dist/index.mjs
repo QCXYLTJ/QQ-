@@ -129,13 +129,13 @@ async function onMessage(ctx, event) {
 	const textall = textlist.join();
 
 	// 群名片管理
-	if (!window.zuduan1 && selfguanli) {
+	if (!window.zuduan1 && selfguanli && !['369015096'].includes(groupId)) {
 		window.zuduan1 = true;
 		const lm = currentConfig.lockedNicknames;
 		// 一次性收集待修改成员
 		for (const m of ms) {
 			// 锁定名片
-			if (groupId == '469160606') {
+			if (['469160606'].includes(groupId)) {
 				if (m.card !== '你已被移出群聊   　　　 　　　　  　　　　' && !m.is_robot) {
 					await callOB11(ctx, 'set_group_card', { group_id: groupId, user_id: m.user_id, card: '你已被移出群聊   　　　 　　　　  　　　　' }); //整乐子修改群名片
 					ctx.logger.info(`修改${m.user_id}的群名片${m.card || m.nickname}为【你已被移出群聊   　　　 　　　　  　　　　】`);
@@ -160,7 +160,7 @@ async function onMessage(ctx, event) {
 
 	if (!['1476811518'].includes(ownerqq)) {
 		// 自动跟话
-		if (!isself && !userAdmin && !['774922031', '314590231'].includes(groupId) && Math.random() < 0.1) {
+		if (!isself && !userAdmin && Math.random() < 0.1) {
 			const textlist = [];
 			for (const obj of event.message) {
 				if (obj.type === 'text') {
@@ -428,26 +428,29 @@ async function onMessage(ctx, event) {
 }
 async function onEvent(ctx, event) {
 	//ctx.logger.info(event);
-	if (event.notice_type == 'group_recall' && !currentConfig.ownlist.includes(String(event.operator_id))) {
-		const message = huancun.get(event.message_id);
-		if (Array.isArray(message)) {
-			message.unshift({
-				type: 'text',
-				data: {
-					text: ` 撤回了【`,
-				},
-			});
-			message.unshift({ type: 'at', data: { qq: String(event.user_id) } });
-			message.push({
-				type: 'text',
-				data: {
-					text: `】`,
-				},
-			});
-			await callOB11(ctx, 'send_group_msg', {
-				group_id: String(event.group_id),
-				message: message,
-			});
+	const groupId = String(event.group_id);
+	if (!['369015096'].includes(groupId)) {
+		if (event.notice_type == 'group_recall' && !currentConfig.ownlist.includes(String(event.operator_id))) {
+			const message = huancun.get(event.message_id);
+			if (Array.isArray(message)) {
+				message.unshift({
+					type: 'text',
+					data: {
+						text: ` 撤回了【`,
+					},
+				});
+				message.unshift({ type: 'at', data: { qq: String(event.user_id) } });
+				message.push({
+					type: 'text',
+					data: {
+						text: `】`,
+					},
+				});
+				await callOB11(ctx, 'send_group_msg', {
+					group_id: String(event.group_id),
+					message: message,
+				});
+			}
 		}
 	}
 }
