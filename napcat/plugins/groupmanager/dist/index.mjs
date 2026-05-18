@@ -158,7 +158,7 @@ async function onMessage(ctx, event) {
 		window.zuduan1 = false;
 	}
 
-	if (!['1476811518'].includes(ownerqq)) {
+	if (!['1476811518'].includes(ownerqq) && false) {
 		// 自动跟话
 		if (!isself && !userAdmin && Math.random() < 0.1) {
 			const textlist = [];
@@ -207,9 +207,44 @@ async function onMessage(ctx, event) {
 		}
 	}
 
-	// 自动反击
-	const fanying = function () {
-		if (!isself && !userAdmin && currentConfig.ownlist.some((id) => atlist.includes(id)) && ['妈', '爹', '爸', '狗', '逼', '🐎', '🐴', 'nm', '屄'].some((s) => textall.includes(s))) {
+	const gongji = function () {
+		if (isself) return;
+		if (userAdmin) return;
+		// 自动反击
+		if (currentConfig.ownlist.some((id) => atlist.includes(id)) && ['妈', '爹', '爸', '狗', '逼', '🐎', '🐴', 'nm', '屄'].some((s) => textall.includes(s))) {
+			callOB11(ctx, 'send_group_msg', {
+				group_id: groupId,
+				message: [
+					{ type: 'at', data: { qq: userId } },
+					{ type: 'text', data: { text: ` ${gongjilist.randomget()}` } },
+				],
+			});
+			if (!currentConfig.targetedUsers.includes(userId)) {
+				currentConfig.targetedUsers.push(userId);
+				saveConfig(ctx, { targetedUsers: currentConfig.targetedUsers });
+				callOB11(ctx, 'send_group_msg', {
+					group_id: groupId,
+					message: [
+						{ type: 'at', data: { qq: userId } },
+						{ type: 'text', data: { text: ` 我准备开始肏你老母的大黑屄了` } },
+					],
+				});
+			}
+		}
+
+		//随机攻击
+		if (Math.random() < 0.1) {
+			callOB11(ctx, 'send_group_msg', {
+				group_id: groupId,
+				message: [
+					{ type: 'at', data: { qq: userId } },
+					{ type: 'text', data: { text: ` ${gongjilist.randomget()}` } },
+				],
+			});
+		}
+
+		//群聊自动攻击
+		if (currentConfig.targetedUsers.includes(userId)) {
 			callOB11(ctx, 'send_group_msg', {
 				group_id: groupId,
 				message: [
@@ -219,18 +254,7 @@ async function onMessage(ctx, event) {
 			});
 		}
 	};
-	fanying();
-
-	//群聊自动攻击
-	if (!isself && !userAdmin && currentConfig.targetedUsers.includes(userId)) {
-		callOB11(ctx, 'send_group_msg', {
-			group_id: groupId,
-			message: [
-				{ type: 'at', data: { qq: userId } },
-				{ type: 'text', data: { text: ` ${gongjilist.randomget()}` } },
-			],
-		});
-	}
+	gongji();
 
 	//违禁词处理
 	if (!isself && !userAdmin && selfguanli && !userguanli && currentConfig.filterKeywords.some((s) => textall.includes(s))) {
@@ -344,7 +368,7 @@ async function onMessage(ctx, event) {
 			}
 		}
 		// 添加查询余额命令（可选，方便用户查看）
-		if (cmd === '禁言余额') {
+		if (cmd === '禁言余额' && selfguanli) {
 			loadConfig(ctx);
 			const balance = currentConfig.creditBalances[userId] || 0;
 			await callOB11(ctx, 'send_group_msg', { group_id: groupId, message: `📊 你的禁言余额：${balance} 分钟` });
